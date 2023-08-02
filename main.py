@@ -30,16 +30,19 @@ def GetLikes(driver,url):
         video_likes = str(elements[5])
     else:
         video_likes = str(elements[4])
-    if "M" in video_likes:
-        video_likes = int(float(video_likes[0 : video_likes.index("M")]) * 1000000)
-    elif "K" in video_likes:
-        video_likes = int(float(video_likes[0 : video_likes.index("K")]) * 1000)
-    else:
-        video_likes = int(video_likes)
+    video_likes = ConvertToInt(video_likes)
 
     return video_likes
 
+def ConvertToInt(string):
+    if "M" in string:
+        string = int(float(string[0 : string.index("M")]) * 1000000)
+    elif "K" in string:
+        string = int(float(string[0 : string.index("K")]) * 1000)
+    else:
+        string = int(string)
 
+    return string
 
 
 @app.route('/videos/<channel>', methods = ['GET'])
@@ -82,12 +85,7 @@ def Get_video_details(channel):
         subscriber_count = driver.find_element(By.ID,'subscriber-count').text
         temp_index = subscriber_count.index('subscribers')
         subscriber_count = subscriber_count[0:temp_index - 1]
-        if "M" in subscriber_count:
-            subscriber_count = int(float(subscriber_count[0 : subscriber_count.index("M")]) * 1000000)
-        elif "K" in subscriber_count:
-            subscriber_count = int(float(subscriber_count[0 : subscriber_count.index("K")]) * 1000)
-        else:
-            subscriber_count = int(subscriber_count)
+        subscriber_count = ConvertToInt(subscriber_count)
         
         keep_going = True
         count = 0
@@ -117,6 +115,8 @@ def Get_video_details(channel):
         video_time = video_meta[1::2]
         video_meta = video_meta[0::2]
         video_views = video_meta
+        video_views = [view[0:view.index('views') - 1] for view in video_views]
+        video_views = [ConvertToInt(view) for view in video_views]
 
         
 
