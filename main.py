@@ -13,7 +13,35 @@ import datetime
 from flask import Flask,abort,jsonify, request
 from bs4 import BeautifulSoup
 
+
+
 app = Flask(__name__)
+
+
+
+
+
+def GetLikes(driver,url):
+    driver.get(url)
+    WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div #bottom-row")))      
+    elements = driver.find_elements(By.CSS_SELECTOR, "div .yt-core-attributed-string--white-space-no-wrap")
+    elements = [element.text for element in elements]
+    if 'Join' in elements:
+        video_likes = str(elements[5])
+    else:
+        video_likes = str(elements[4])
+    if "M" in video_likes:
+        video_likes = int(float(video_likes[0 : video_likes.index("M")]) * 1000000)
+    elif "K" in video_likes:
+        video_likes = int(float(video_likes[0 : video_likes.index("K")]) * 1000)
+    else:
+        video_likes = int(video_likes)
+
+    return video_likes
+
+
+
+
 @app.route('/videos/<channel>', methods = ['GET'])
 
 def Get_video_details(channel):
@@ -90,7 +118,7 @@ def Get_video_details(channel):
         video_meta = video_meta[0::2]
         video_views = video_meta
 
-        driver.quit()
+        
 
         all_videos = []
         for i in range(len(video_links)):
@@ -116,14 +144,19 @@ def Get_video_details(channel):
             except:
                 video['views'] = ""
             try:
+                video['likes'] = GetLikes(driver, video['url'])
+            except:
+                video['likes'] = ""
+            try:
                 video['thumbnail'] = video_images[i]
             except:
                 video['thumbnail'] = ''
+
             
             all_videos.append(video)
         try:
             channel_url = account_url.strip("@")[:-7]
-            print(channel_url)
+            
         except:
             return jsonify({"message": "oops"})
         
@@ -135,8 +168,9 @@ def Get_video_details(channel):
         }
         all_data = {
             "account data" : user_videos,
-            "account videos" : all_videos
+            f"{channel.strip('@')} videos" : all_videos
         }
+        driver.quit()
 
         file = f'video_data-{channel.strip("@")}.csv'
         sys.stdout = open(file, 'w',encoding='utf-8')
