@@ -44,14 +44,22 @@ def Get_video_details(channel):
 
 
 
-        time.sleep(2)
+        
         try:
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "video-title-link")))
         except:
             driver.quit()
             return jsonify({'message': 'It appears there isnt a youtube channel with the name specified, please check your spelling and make sure you put a "@" before the channel name'}), 404
         
-        subscriber_count = driver.find_element(By.ID,'subscriber-count')
+        subscriber_count = driver.find_element(By.ID,'subscriber-count').text
+        temp_index = subscriber_count.index('subscribers')
+        subscriber_count = subscriber_count[0:temp_index - 1]
+        if "M" in subscriber_count:
+            subscriber_count = int(float(subscriber_count[0 : subscriber_count.index("M")]) * 1000000)
+        elif "K" in subscriber_count:
+            subscriber_count = int(float(subscriber_count[0 : subscriber_count.index("K")]) * 1000)
+        else:
+            subscriber_count = int(subscriber_count)
         
         keep_going = True
         count = 0
@@ -121,21 +129,20 @@ def Get_video_details(channel):
         
         user_videos = {   
 
-            # 'Youtube channel': channel_url,
-            # 'subscriber count': subscriber_count.text,
-            f"{channel.strip('@')} videos": all_videos
+            'Youtube channel': channel_url,
+            'subscriber count': subscriber_count,
             
         }
-        # all_data = {
-        #     "account data" : user_videos,
-        #     'account videos' : all_videos
-        # }
+        all_data = {
+            "account data" : user_videos,
+            "account videos" : all_videos
+        }
 
         file = f'video_data-{channel.strip("@")}.csv'
         sys.stdout = open(file, 'w',encoding='utf-8')
         pd.DataFrame(all_videos).to_csv(sys.stdout,header=True,index=False,encoding='utf-8')   
         sys.stdout = sys.__stdout__
-        response = jsonify(user_videos)
+        response = jsonify(all_data)
         # response.headers["Content-Type"] = "application/json; charset=utf-8"  # Set the Content-Type to include utf-8 encoding
         # response.headers["Access-Control-Allow-Origin"] = "*"  # Allow cross-origin requests, if needed
         return response, 200
