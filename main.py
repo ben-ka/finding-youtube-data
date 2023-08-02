@@ -11,7 +11,7 @@ import pandas as pd
 import sys
 import datetime
 from flask import Flask,abort,jsonify, request
-
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 @app.route('/videos/<channel>', methods = ['GET'])
@@ -36,9 +36,11 @@ def Get_video_details(channel):
 
         driver.maximize_window()
         if is_full:
-            driver.get(f'https://www.youtube.com/{channel}/videos')
+            account_url = f'https://www.youtube.com/{channel}/videos'
+            driver.get(account_url)
         else:
-            driver.get(f'https://www.youtube.com/@{channel}/videos')
+            account_url = f'https://www.youtube.com/@{channel}/videos'
+            driver.get(account_url)
 
 
 
@@ -46,7 +48,11 @@ def Get_video_details(channel):
         try:
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "video-title-link")))
         except:
+            driver.quit()
             return jsonify({'message': 'It appears there isnt a youtube channel with the name specified, please check your spelling and make sure you put a "@" before the channel name'}), 404
+        
+        subscriber_count = driver.find_element(By.ID,'subscriber-count')
+        
         keep_going = True
         count = 0
         prev_last_link = None
@@ -81,6 +87,9 @@ def Get_video_details(channel):
         all_videos = []
         for i in range(len(video_links)):
             video = {}
+            # response = requests.get(video_links[i])
+            # soup = BeautifulSoup(response.text,'html.parser')
+            # soup.find()
             video['id'] = i+1
             try:
                 video['url'] = video_links[i]
@@ -104,19 +113,36 @@ def Get_video_details(channel):
                 video['thumbnail'] = ''
             
             all_videos.append(video)
-        user_videos = {f'{channel.strip("@")} videos': all_videos}
+        try:
+            channel_url = account_url.strip("@")[:-7]
+            print(channel_url)
+        except:
+            return jsonify({"message": "oops"})
+        
+        user_videos = {   
 
+            # 'Youtube channel': channel_url,
+            # 'subscriber count': subscriber_count.text,
+            f"{channel.strip('@')} videos": all_videos
+            
+        }
+        # all_data = {
+        #     "account data" : user_videos,
+        #     'account videos' : all_videos
+        # }
 
         file = f'video_data-{channel.strip("@")}.csv'
         sys.stdout = open(file, 'w',encoding='utf-8')
-        pd.DataFrame(user_videos).to_csv(sys.stdout,header=True,index=False,encoding='utf-8')   
+        pd.DataFrame(all_videos).to_csv(sys.stdout,header=True,index=False,encoding='utf-8')   
         sys.stdout = sys.__stdout__
         response = jsonify(user_videos)
         # response.headers["Content-Type"] = "application/json; charset=utf-8"  # Set the Content-Type to include utf-8 encoding
         # response.headers["Access-Control-Allow-Origin"] = "*"  # Allow cross-origin requests, if needed
         return response, 200
     except:
-        return jsonify({'message': 'there has been an error'}),400
+        driver.quit()
+        return jsonify({'message': f'there has been an error'}),400
+
 
 
 if __name__ == '__main__':
