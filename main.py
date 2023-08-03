@@ -48,6 +48,12 @@ def ConvertToInt(string):
 @app.route('/videos/<channel>', methods = ['GET'])
 
 def Get_video_details(channel):
+    full = request.args.get("full", "").lower()
+    if full == "true":
+        extended = True
+    else:
+        extended = False
+    print(extended)
     try:
         if "@" in channel:
             is_full = True
@@ -139,14 +145,16 @@ def Get_video_details(channel):
                 video['age'] = video_time[i]
             except:
                 video['age'] = ""
+            
             try:
                 video['views'] = video_views[i]  
             except:
                 video['views'] = ""
-            try:
-                video['likes'] = GetLikes(driver, video['url'])
-            except:
-                video['likes'] = ""
+            if extended:
+                try:
+                    video['likes'] = GetLikes(driver, video['url'])
+                except:
+                    video['likes'] = ""
             try:
                 video['thumbnail'] = video_images[i]
             except:
